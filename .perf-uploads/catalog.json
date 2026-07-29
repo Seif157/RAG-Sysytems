@@ -1,0 +1,24 @@
+[
+  {
+    "document_id": "a0a1ca15ef93a328cc20c8729362ecf1",
+    "filename": "handbook.md",
+    "document_type": "MARKDOWN",
+    "content_hash": "f834c71ec48512e20b800b273f46119edc6c92297845a1863cc2720d101d03d3",
+    "size_bytes": 5858,
+    "source_path": ".perf-uploads\\a0a1ca15ef93a328cc20c8729362ecf1.md",
+    "ingest_version": 1,
+    "chunk_count": 80,
+    "ingested_at": "2026-07-28T14:07:53.820173+00:00"
+  },
+  {
+    "document_id": "6466e450a16b77b865c5829d6b6c56d9",
+    "filename": "report.pdf",
+    "document_type": "PDF",
+    "content_hash": "dff986ad1ba17408f218cb40a19d61f48012cbf44776d545bfc575cfe3711720",
+    "size_bytes": 10583,
+    "source_path": ".perf-uploads\\6466e450a16b77b865c5829d6b6c56d9.pdf",
+    "ingest_version": 1,
+    "chunk_count": 20,
+    "ingested_at": "2026-07-28T14:07:53.947866+00:00"
+  }
+]

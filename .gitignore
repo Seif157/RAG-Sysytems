@@ -1,0 +1,37 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+build/
+dist/
+
+# Environments
+.venv/
+venv/
+.env
+.env.local
+
+# Tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Runtime artefacts
+logs/
+storage/
+blobs/
+*.log
+
+# Legacy prototype artefacts (superseded — see architecture spec section 19.3)
+Experiments/storage/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

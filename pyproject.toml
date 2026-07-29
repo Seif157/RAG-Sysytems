@@ -1,0 +1,161 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "document-rag"
+version = "0.1.0"
+description = "Production-grade Document Question Answering platform (RAG) with cited answers."
+readme = "README.md"
+# 3.12 floor: the codebase uses PEP 695 `type` aliases and generic syntax.
+# It is also the highest version with wheels for the ML dependencies a later
+# phase needs (torch, via sentence-transformers).
+requires-python = ">=3.12"
+license = { text = "Proprietary" }
+
+# Dependencies are added by the phase that first needs them, so the project
+# stays installable and runnable after every phase. The BGE reranker
+# (sentence-transformers, torch) arrives in phase 4.
+dependencies = [
+    "pydantic>=2.9",
+    "pydantic-settings>=2.5",
+    "structlog>=24.4",
+    # Phase 2 -- the vertical slice
+    "streamlit>=1.40",
+    "qdrant-client>=1.12",
+    "openai>=1.60",
+    "google-genai>=1.0",
+    "tiktoken>=0.8",
+    # Document parsing
+    "pypdf>=5.0",
+    "python-docx>=1.1",
+    # Cross-encoder reranking. Verified working on Python 3.14 with torch 2.13.
+    "torch>=2.0",
+    "sentence-transformers>=3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=5.0",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.7",
+    "mypy>=1.13",
+    "import-linter>=2.1",
+    # Generates PDF fixtures. Test-only: pypdf reads PDFs but cannot write text.
+    "reportlab>=4.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rag"]
+
+
+# --------------------------------------------------------------------------- #
+# Ruff — formatting and linting
+# --------------------------------------------------------------------------- #
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+    "TID",  # flake8-tidy-imports
+    "RUF",  # ruff-specific
+    "D",    # pydocstyle
+    "ANN",  # flake8-annotations
+]
+ignore = [
+    "D107",    # __init__ docstring — documented at class level instead
+    "D203",    # conflicts with D211
+    "D213",    # conflicts with D212
+    "ANN401",  # Any is occasionally the honest annotation
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests document themselves through their names; annotations on fixtures and
+# test methods add noise without adding safety.
+"tests/**" = [
+    "D100", "D101", "D102", "D103", "D104",
+    "ANN001", "ANN002", "ANN003", "ANN201", "ANN202", "ANN204", "ANN206",
+    "SLF001",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+
+# --------------------------------------------------------------------------- #
+# Mypy — static typing
+# --------------------------------------------------------------------------- #
+[tool.mypy]
+python_version = "3.12"
+packages = ["rag"]
+mypy_path = "src"
+strict = true
+warn_unreachable = true
+show_error_codes = true
+disallow_any_generics = true
+no_implicit_reexport = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+
+# --------------------------------------------------------------------------- #
+# Pytest
+# --------------------------------------------------------------------------- #
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-ra",
+]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "unit: fast, hermetic tests with no external dependencies",
+    "integration: tests requiring real infrastructure (Qdrant, Postgres, Redis)",
+    "e2e: full-stack tests against a running system",
+    "contract: port contract suites run against every implementation",
+    "architecture: layering and dependency-rule guards",
+]
+filterwarnings = [
+    # Warnings are errors: a DeprecationWarning in our own code is a bug report
+    # from the future, and ignoring it by default is how upgrades become painful.
+    "error",
+    # google-genai touches a typing internal that Python 3.14 deprecated. Not
+    # ours to fix, and scoped narrowly so our own deprecations still fail.
+    "ignore:'_UnionGenericAlias' is deprecated:DeprecationWarning",
+]
+
+
+# --------------------------------------------------------------------------- #
+# Coverage
+# --------------------------------------------------------------------------- #
+[tool.coverage.run]
+source = ["src/rag"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "\\.\\.\\.",
+]
