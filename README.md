@@ -182,8 +182,8 @@ tests/
 
 ## Legacy prototype
 
-`QAWithPDF/` and `StreamlitApp.py` are the original prototype, kept as a
-behavioural reference and excluded from packaging and CI. They are superseded:
-the upload was never actually read (`data_ingestion.py` ignored its argument and
-loaded a hardcoded folder), the corpus was re-indexed on every question, and the
-code no longer runs against current LlamaIndex.
+The original `QAWithPDF/` + `StreamlitApp.py` prototype has been removed
+(ADR-019). It remains in git history for reference. It was superseded rather
+than refactored: the upload was never actually read (`data_ingestion.py` ignored
+its argument and loaded a hardcoded folder), the corpus was re-indexed on every
+question, and the code no longer ran against current LlamaIndex.

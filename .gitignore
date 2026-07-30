@@ -23,12 +23,12 @@ htmlcov/
 
 # Runtime artefacts
 logs/
-storage/
 blobs/
 *.log
 
-# Legacy prototype artefacts (superseded — see architecture spec section 19.3)
-Experiments/storage/
+# Uploaded originals and the ingest catalogue (UPLOAD_DIR). Local state, not
+# source: the store recreates the directory on demand.
+uploads/
 
 # Editors / OS
 .idea/

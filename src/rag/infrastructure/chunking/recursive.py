@@ -11,7 +11,6 @@ keeps "page 14, section 3.2" true rather than approximately true.
 
 from __future__ import annotations
 
-import re
 from collections.abc import Callable, Iterator, Sequence
 
 from rag.domain.models import ChunkCandidate, ContentBlock, ParsedDocument
@@ -22,8 +21,6 @@ __all__ = ["RecursiveChunker"]
 #: Split points in descending order of preference. Splitting on a paragraph
 #: boundary preserves more meaning than splitting on a space.
 _SEPARATORS: tuple[str, ...] = ("\n\n", "\n", ". ", "? ", "! ", "; ", ", ", " ")
-
-_WHITESPACE = re.compile(r"\s+")
 
 
 def _default_token_count(text: str) -> int:
