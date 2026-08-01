@@ -24,19 +24,15 @@ __all__ = ["bootstrap", "load_settings", "run_startup_checks"]
 
 _logger = get_logger(__name__)
 
-#: Which credential each answer-generation provider needs. A local model needs
-#: none, which is what makes it the convenient choice for CI.
+#: Which credential each implemented answer-generation provider needs.
 _LLM_CREDENTIALS: dict[LLMProvider, str] = {
     LLMProvider.OPENROUTER: "OPENROUTER_API_KEY",
     LLMProvider.GEMINI: "GOOGLE_API_KEY",
-    LLMProvider.OPENAI: "OPENAI_API_KEY",
-    LLMProvider.ANTHROPIC: "ANTHROPIC_API_KEY",
 }
 
 #: Which credential each embedding provider needs.
 _EMBEDDING_CREDENTIALS: dict[EmbeddingProvider, str] = {
     EmbeddingProvider.OPENAI: "OPENAI_API_KEY",
-    EmbeddingProvider.GEMINI: "GOOGLE_API_KEY",
 }
 
 

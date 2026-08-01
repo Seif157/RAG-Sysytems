@@ -16,7 +16,7 @@ from rag.domain.models import (
     ToolResult,
     Turn,
 )
-from rag.domain.policies import assemble_citations
+from rag.domain.policies import assemble_citations, remove_unknown_markers
 from rag.domain.ports import LLMClient
 from rag.domain.prompts import NOT_FOUND_PHRASE
 
@@ -80,9 +80,10 @@ class AgenticAnswerUseCase:
                 if not response.text.strip():
                     raise LLMError("the model returned neither text nor tool calls")
                 context = self._context_builder.build(tuple(evidence.values()))
+                answer_text = remove_unknown_markers(response.text, context)
                 return Answer(
-                    text=response.text,
-                    citations=assemble_citations(response.text, context),
+                    text=answer_text,
+                    citations=assemble_citations(answer_text, context),
                     model_id=response.model_id,
                     prompt_version=self._prompt_version,
                     token_usage=response.usage,

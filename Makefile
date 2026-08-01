@@ -46,7 +46,7 @@ cov: ## Run tests with a coverage report
 
 check: fmt-check lint types arch test ## Everything CI runs
 
-up: ## Start supporting infrastructure (Qdrant, Postgres, Redis)
+up: ## Start Qdrant
 	docker compose up -d
 
 down: ## Stop supporting infrastructure

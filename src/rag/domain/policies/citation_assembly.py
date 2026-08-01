@@ -25,7 +25,7 @@ import re
 
 from rag.domain.models import Citation, ContextBlock, ScoredChunk, ScoreSource
 
-__all__ = ["assemble_citations", "extract_citation_markers"]
+__all__ = ["assemble_citations", "extract_citation_markers", "remove_unknown_markers"]
 
 #: Matches a bracketed run of digits. Deliberately narrow: "[see appendix]" is
 #: prose, not a citation, and treating it as one would fabricate a source.
@@ -54,6 +54,16 @@ def extract_citation_markers(text: str) -> tuple[str, ...]:
     for match in _MARKER.finditer(text):
         seen.setdefault(match.group(1), None)
     return tuple(seen)
+
+
+def remove_unknown_markers(text: str, context: ContextBlock) -> str:
+    """Remove citation markers that do not resolve to supplied evidence."""
+    return _MARKER.sub(
+        lambda match: (
+            match.group(0) if context.chunk_id_for_marker(match.group(1)) is not None else ""
+        ),
+        text,
+    )
 
 
 def _snippet(text: str) -> str:

@@ -22,7 +22,12 @@ def _isolate_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(name, raising=False)
 
 
-_LOCAL = {"LLM_PROVIDER": "local", "EMBEDDING_PROVIDER": "local", "ENABLE_RERANK": "false"}
+_LOCAL = {
+    "LLM_PROVIDER": "openrouter",
+    "OPENROUTER_API_KEY": "test-key",
+    "EMBEDDING_PROVIDER": "local",
+    "ENABLE_RERANK": "false",
+}
 
 
 class TestCheckStore:

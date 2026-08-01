@@ -30,10 +30,6 @@ KNOWN_EMBEDDING_DIMENSIONS: dict[str, int] = {
     "text-embedding-3-small": 1536,
     "text-embedding-3-large": 3072,
     "text-embedding-ada-002": 1536,
-    # Google
-    "models/embedding-001": 768,
-    "models/text-embedding-004": 768,
-    "text-embedding-004": 768,
     # BAAI (local / HuggingFace)
     "BAAI/bge-small-en-v1.5": 384,
     "BAAI/bge-base-en-v1.5": 768,
@@ -49,7 +45,6 @@ KNOWN_EMBEDDING_DIMENSIONS: dict[str, int] = {
 #: honest when the provider is changed.
 DEFAULT_EMBEDDING_MODELS: dict[EmbeddingProvider, str] = {
     EmbeddingProvider.OPENAI: "text-embedding-3-small",
-    EmbeddingProvider.GEMINI: "models/embedding-001",
     EmbeddingProvider.HUGGINGFACE: "BAAI/bge-small-en-v1.5",
     EmbeddingProvider.LOCAL: "BAAI/bge-small-en-v1.5",
 }

@@ -70,14 +70,14 @@ class TestEnvironmentVariableNames:
             ("APP_ENV", "production", lambda s: s.app.env.value),
             ("LOG_LEVEL", "DEBUG", lambda s: s.app.log_level),
             ("LOG_FORMAT", "json", lambda s: s.app.log_format.value),
-            ("LLM_PROVIDER", "openai", lambda s: s.llm.provider.value),
+            ("LLM_PROVIDER", "gemini", lambda s: s.llm.provider.value),
             ("LLM_MODEL", "gpt-4o", lambda s: s.llm.model),
             ("TEMPERATURE", "0.7", lambda s: s.llm.temperature),
             ("MAX_OUTPUT_TOKENS", "512", lambda s: s.llm.max_output_tokens),
             ("LLM_TIMEOUT_S", "30.0", lambda s: s.llm.timeout_s),
-            ("EMBEDDING_PROVIDER", "gemini", lambda s: s.embedding.provider.value),
+            ("EMBEDDING_PROVIDER", "huggingface", lambda s: s.embedding.provider.value),
             ("EMBEDDING_BATCH_SIZE", "64", lambda s: s.embedding.batch_size),
-            ("CHUNKING_STRATEGY", "semantic", lambda s: s.chunking.strategy.value),
+            ("CHUNKING_STRATEGY", "recursive", lambda s: s.chunking.strategy.value),
             ("CHUNK_SIZE", "512", lambda s: s.chunking.chunk_size),
             ("CHUNK_OVERLAP", "64", lambda s: s.chunking.chunk_overlap),
             ("MAX_CHUNK_TOKENS", "2048", lambda s: s.chunking.max_chunk_tokens),
@@ -281,7 +281,6 @@ class TestRangeValidation:
             ("MAX_UPLOAD_BYTES", "0"),
             ("TEMPERATURE", "-0.5"),
             ("MEMORY_WINDOW_TURNS", "-1"),
-            ("SEMANTIC_BREAKPOINT_PERCENTILE", "100"),
         ],
     )
     def test_out_of_range_values_are_rejected(self, variable, value):
@@ -298,19 +297,27 @@ class TestEnums:
         with pytest.raises(ValidationError):
             _settings(LLM_PROVIDER="not-a-provider")
 
-    def test_every_provider_the_design_names_is_selectable(self):
-        assert {p.value for p in LLMProvider} == {
-            "openrouter",
-            "gemini",
-            "openai",
-            "anthropic",
-            "local",
-        }
+    def test_only_providers_with_complete_adapters_are_selectable(self):
+        assert {p.value for p in LLMProvider} == {"openrouter", "gemini"}
         assert {p.value for p in EmbeddingProvider} == {
             "openai",
-            "gemini",
             "huggingface",
             "local",
         }
         assert {f.value for f in LogFormat} == {"console", "json"}
-        assert {c.value for c in ChunkingStrategyName} == {"recursive", "semantic", "sentence"}
+        assert {c.value for c in ChunkingStrategyName} == {"recursive"}
+
+    @pytest.mark.parametrize(
+        ("variable", "value"),
+        [
+            ("LLM_PROVIDER", "openai"),
+            ("LLM_PROVIDER", "anthropic"),
+            ("LLM_PROVIDER", "local"),
+            ("EMBEDDING_PROVIDER", "gemini"),
+            ("CHUNKING_STRATEGY", "semantic"),
+            ("CHUNKING_STRATEGY", "sentence"),
+        ],
+    )
+    def test_unimplemented_options_are_rejected_during_settings_loading(self, variable, value):
+        with pytest.raises(ValidationError):
+            _settings(**{variable: value})

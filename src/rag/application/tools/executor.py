@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 
 from rag.application.tools.search_documents import SearchDocumentsTool
-from rag.domain.errors import ToolExecutionError, ToolValidationError
+from rag.domain.errors import RAGError, ToolValidationError
 from rag.domain.models import ContextBlock, ToolCall, ToolResult
 
 __all__ = ["ToolExecutor"]
@@ -34,5 +34,5 @@ class ToolExecutor:
             return ToolResult(call.call_id, call.name, exc.message, True), None
         except TimeoutError:
             return ToolResult(call.call_id, call.name, "The search timed out.", True), None
-        except ToolExecutionError as exc:
-            return ToolResult(call.call_id, call.name, exc.message, True), None
+        except RAGError:
+            return ToolResult(call.call_id, call.name, "Document search failed.", True), None

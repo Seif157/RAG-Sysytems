@@ -8,7 +8,11 @@ cheapest tests in the codebase -- no mocks, no setup, exhaustive edge cases.
 """
 
 from rag.domain.policies.chunk_identity import derive_chunk_id
-from rag.domain.policies.citation_assembly import assemble_citations, extract_citation_markers
+from rag.domain.policies.citation_assembly import (
+    assemble_citations,
+    extract_citation_markers,
+    remove_unknown_markers,
+)
 from rag.domain.policies.context_budget import select_within_budget
 from rag.domain.policies.context_dedup import (
     DEFAULT_DUPLICATE_THRESHOLD,
@@ -26,5 +30,6 @@ __all__ = [
     "extract_citation_markers",
     "order_for_attention",
     "reciprocal_rank_fusion",
+    "remove_unknown_markers",
     "select_within_budget",
 ]

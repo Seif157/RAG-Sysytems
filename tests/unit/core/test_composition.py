@@ -245,13 +245,6 @@ class TestLLMWiring:
         with pytest.raises(ConfigurationError, match="GOOGLE_API_KEY"):
             _ = container.llm
 
-    def test_a_provider_with_no_adapter_says_what_is_available(self):
-        # Better than an AttributeError three layers down.
-        container = Container(_settings(LLM_PROVIDER="anthropic"))
-
-        with pytest.raises(ConfigurationError, match="openrouter"):
-            _ = container.llm
-
     def test_an_injected_client_overrides_the_configured_provider(self):
         # The seam the test suite hangs from: no key needed to answer a question.
         fake = FakeLLMClient()
@@ -300,17 +293,13 @@ class TestStartupChecks:
 
     def test_a_missing_embedding_credential_fails_startup(self):
         settings = _settings(
-            LLM_PROVIDER="local",
+            LLM_PROVIDER="openrouter",
+            OPENROUTER_API_KEY="test-key",
             EMBEDDING_PROVIDER="openai",
         )
 
         with pytest.raises(ConfigurationError, match="OPENAI_API_KEY"):
             run_startup_checks(settings)
-
-    def test_local_providers_need_no_credentials(self):
-        settings = _settings(LLM_PROVIDER="local", EMBEDDING_PROVIDER="local")
-
-        assert run_startup_checks(settings)
 
     def test_an_openrouter_deployment_passes_with_its_credential(self):
         settings = _settings(
@@ -328,19 +317,14 @@ class TestStartupChecks:
         with pytest.raises(ConfigurationError, match="OPENROUTER_API_KEY"):
             run_startup_checks(settings)
 
-    def test_anthropic_requires_its_own_credential(self):
-        settings = _settings(LLM_PROVIDER="anthropic", EMBEDDING_PROVIDER="local")
-
-        with pytest.raises(ConfigurationError, match="ANTHROPIC_API_KEY"):
-            run_startup_checks(settings)
-
     def test_production_refuses_human_readable_logs(self):
         # Console output cannot be queried by log aggregation, so in production
         # it is equivalent to having no observability at all.
         settings = _settings(
             APP_ENV="production",
             LOG_FORMAT="console",
-            LLM_PROVIDER="local",
+            LLM_PROVIDER="openrouter",
+            OPENROUTER_API_KEY="test-key",
             EMBEDDING_PROVIDER="local",
         )
 
@@ -351,13 +335,18 @@ class TestStartupChecks:
         settings = _settings(
             APP_ENV="production",
             LOG_FORMAT="json",
-            LLM_PROVIDER="local",
+            LLM_PROVIDER="openrouter",
+            OPENROUTER_API_KEY="test-key",
             EMBEDDING_PROVIDER="local",
         )
 
         assert "logging" in run_startup_checks(settings)
 
     def test_the_checks_that_ran_are_reported(self):
-        settings = _settings(LLM_PROVIDER="local", EMBEDDING_PROVIDER="local")
+        settings = _settings(
+            LLM_PROVIDER="openrouter",
+            OPENROUTER_API_KEY="test-key",
+            EMBEDDING_PROVIDER="local",
+        )
 
         assert set(run_startup_checks(settings)) == {"credentials", "logging"}

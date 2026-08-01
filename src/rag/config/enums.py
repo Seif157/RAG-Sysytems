@@ -57,9 +57,6 @@ class LLMProvider(StrEnum):
 
     OPENROUTER = "openrouter"
     GEMINI = "gemini"
-    OPENAI = "openai"
-    ANTHROPIC = "anthropic"
-    LOCAL = "local"
 
 
 class EmbeddingProvider(StrEnum):
@@ -70,7 +67,6 @@ class EmbeddingProvider(StrEnum):
     """
 
     OPENAI = "openai"
-    GEMINI = "gemini"
     HUGGINGFACE = "huggingface"
     LOCAL = "local"
 
@@ -87,8 +83,6 @@ class ChunkingStrategyName(StrEnum):
     """Selectable chunking strategies (ADR-021 -- recursive is default)."""
 
     RECURSIVE = "recursive"
-    SEMANTIC = "semantic"
-    SENTENCE = "sentence"
 
 
 class RerankerProvider(StrEnum):

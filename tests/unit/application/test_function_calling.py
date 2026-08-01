@@ -169,6 +169,7 @@ class TestAgenticAnswer:
         use_case, _ = _use_case(llm)
         answer = await use_case.execute(Query("leave"))
         assert answer.citations == ()
+        assert "[99]" not in answer.text
 
     async def test_tool_rounds_are_bounded(self):
         call = ToolCall("call-1", "search_documents", {"query": "leave"})

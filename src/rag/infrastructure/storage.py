@@ -13,6 +13,8 @@ file has not changed.
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from collections.abc import Iterable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -125,9 +127,26 @@ class DocumentCatalog:
         return {str(entry["document_id"]): self._from_dict(entry) for entry in raw}
 
     def _save(self, documents: Iterable[Document]) -> None:
-        """Write the catalogue to disk."""
+        """Atomically write the catalogue to disk."""
         payload = [self._to_dict(document) for document in documents]
-        self._path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        temporary_path: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=self._path.parent,
+                prefix=f".{self._path.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as temporary:
+                temporary.write(json.dumps(payload, indent=2))
+                temporary.flush()
+                os.fsync(temporary.fileno())
+                temporary_path = Path(temporary.name)
+            temporary_path.replace(self._path)
+        finally:
+            if temporary_path is not None:
+                temporary_path.unlink(missing_ok=True)
 
     @staticmethod
     def _to_dict(document: Document) -> dict[str, Any]:

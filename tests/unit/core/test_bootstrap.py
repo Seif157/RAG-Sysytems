@@ -18,7 +18,11 @@ from rag.domain.models import DistanceMetric
 
 pytestmark = pytest.mark.unit
 
-_LOCAL_ONLY = {"LLM_PROVIDER": "local", "EMBEDDING_PROVIDER": "local"}
+_LOCAL_ONLY = {
+    "LLM_PROVIDER": "openrouter",
+    "OPENROUTER_API_KEY": "test-key",
+    "EMBEDDING_PROVIDER": "local",
+}
 
 
 @pytest.fixture(autouse=True)

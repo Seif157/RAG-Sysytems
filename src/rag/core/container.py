@@ -73,9 +73,8 @@ class Container:
     Dependencies are built once and cached. Two containers share nothing, which
     keeps tests independent of one another.
 
-    Providers that configuration allows but no adapter implements yet fail with
-    a message naming the setting and what *is* available -- better than an
-    ``AttributeError`` three layers down.
+    Configuration enums contain only providers with complete adapters, so an
+    unsupported choice is rejected while settings are parsed.
     """
 
     def __init__(
@@ -150,11 +149,7 @@ class Container:
                 batch_size=self._settings.embedding.batch_size,
             )
 
-        raise ConfigurationError(
-            f"EMBEDDING_PROVIDER={provider.value!r} has no adapter; "
-            f"available: local, huggingface, openai",
-            context={"variable": "EMBEDDING_PROVIDER", "value": provider.value},
-        )
+        raise AssertionError(f"unhandled embedding provider: {provider!r}")
 
     @cached_property
     def llm(self) -> LLMClient:
@@ -177,10 +172,7 @@ class Container:
                 model=self._settings.llm.model,
             )
 
-        raise ConfigurationError(
-            f"LLM_PROVIDER={provider.value!r} has no adapter yet; available: openrouter, gemini",
-            context={"variable": "LLM_PROVIDER", "value": provider.value},
-        )
+        raise AssertionError(f"unhandled LLM provider: {provider!r}")
 
     @cached_property
     def vector_store(self) -> VectorStore:
@@ -205,11 +197,7 @@ class Container:
         """The configured chunking strategy."""
         strategy = self._settings.chunking.strategy
         if strategy is not ChunkingStrategyName.RECURSIVE:
-            raise ConfigurationError(
-                f"CHUNKING_STRATEGY={strategy.value!r} has no implementation yet; "
-                f"available: recursive",
-                context={"variable": "CHUNKING_STRATEGY", "value": strategy.value},
-            )
+            raise AssertionError(f"unhandled chunking strategy: {strategy!r}")
         return RecursiveChunker(
             chunk_size=self._settings.chunking.chunk_size,
             chunk_overlap=self._settings.chunking.chunk_overlap,

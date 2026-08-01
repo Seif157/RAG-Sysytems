@@ -136,7 +136,6 @@ class CredentialsSettings(_Section):
             that changes when the answer model changes.
         google_api_key: Credential for Gemini.
         openai_api_key: Credential for OpenAI.
-        anthropic_api_key: Credential for Anthropic.
     """
 
     openrouter_api_key: SecretStr | None = Field(
@@ -144,13 +143,11 @@ class CredentialsSettings(_Section):
     )
     google_api_key: SecretStr | None = Field(default=None, validation_alias="GOOGLE_API_KEY")
     openai_api_key: SecretStr | None = Field(default=None, validation_alias="OPENAI_API_KEY")
-    anthropic_api_key: SecretStr | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
 
     _blank_is_absent = field_validator(
         "openrouter_api_key",
         "google_api_key",
         "openai_api_key",
-        "anthropic_api_key",
         mode="before",
     )(_optional_secret)
 
@@ -252,8 +249,6 @@ class ChunkingSettings(_Section):
         chunk_size: Target chunk size, in the strategy's own units.
         chunk_overlap: Overlap between adjacent chunks.
         max_chunk_tokens: Hard ceiling every strategy must respect.
-        semantic_breakpoint_percentile: Similarity percentile at which the
-            semantic strategy splits. Ignored by other strategies.
     """
 
     strategy: ChunkingStrategyName = Field(
@@ -262,9 +257,6 @@ class ChunkingSettings(_Section):
     chunk_size: int = Field(default=800, ge=1, validation_alias="CHUNK_SIZE")
     chunk_overlap: int = Field(default=100, ge=0, validation_alias="CHUNK_OVERLAP")
     max_chunk_tokens: int = Field(default=1024, ge=1, validation_alias="MAX_CHUNK_TOKENS")
-    semantic_breakpoint_percentile: int = Field(
-        default=95, ge=1, le=99, validation_alias="SEMANTIC_BREAKPOINT_PERCENTILE"
-    )
 
     @model_validator(mode="after")
     def _overlap_fits_inside_chunk(self) -> Self:

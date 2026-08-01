@@ -333,7 +333,7 @@ graph TB
             load["DocumentLoader<br/>format detection"]
             parse["ParserRegistry →<br/>PdfParser / DocxParser /<br/>TxtParser / MarkdownParser"]
             meta["MetadataExtractor<br/>chain"]
-            chunk["ChunkingStrategy<br/>recursive / semantic / sentence"]
+            chunk["ChunkingStrategy<br/>recursive"]
             emb["Embedder (dense)<br/>+ SparseEncoder"]
             store["VectorStoreWriter"]
         end
@@ -474,8 +474,6 @@ document-rag/
 │   │   │   └── chain.py            # composite extractor
 │   │   ├── chunking/
 │   │   │   ├── recursive.py
-│   │   │   ├── semantic.py
-│   │   │   ├── sentence.py
 │   │   │   └── factory.py          # CHUNKING_STRATEGY → strategy
 │   │   ├── embeddings/
 │   │   │   ├── openai_embedder.py
@@ -1309,7 +1307,7 @@ Streamlit talks to the backend exclusively through `presentation/ui/api_client.p
 | App | `APP_ENV`, `LOG_LEVEL`, `LOG_FORMAT`, `API_BASE_URL` |
 | LLM | `LLM_PROVIDER`, `LLM_MODEL`, `TEMPERATURE`, `MAX_OUTPUT_TOKENS`, `LLM_TIMEOUT_S` |
 | Embedding | `EMBEDDING_PROVIDER`, `EMBEDDING_MODEL`, `EMBEDDING_DIMENSION`, `EMBEDDING_BATCH_SIZE` |
-| Chunking | `CHUNKING_STRATEGY`, `CHUNK_SIZE`, `CHUNK_OVERLAP`, `MAX_CHUNK_TOKENS`, `SEMANTIC_BREAKPOINT_PERCENTILE` |
+| Chunking | `CHUNKING_STRATEGY`, `CHUNK_SIZE`, `CHUNK_OVERLAP`, `MAX_CHUNK_TOKENS` |
 | Vector DB | `VECTOR_DATABASE`, `QDRANT_URL`, `QDRANT_API_KEY`, `COLLECTION_NAME`, `DISTANCE_METRIC` |
 | Retrieval | `TOP_K` (20), `RERANK_TOP_K` (5), `ENABLE_HYBRID`, `RRF_K` (60), `SPARSE_WEIGHT` |
 | Reranker | `ENABLE_RERANK`, `RERANKER_PROVIDER`, `RERANKER_MODEL`, `RERANKER_BATCH_SIZE` |
@@ -1320,7 +1318,7 @@ Streamlit talks to the backend exclusively through `presentation/ui/api_client.p
 | Ingestion | `MAX_UPLOAD_BYTES`, `ALLOWED_MIME_TYPES`, `INGEST_CONCURRENCY` |
 | Infra | `DATABASE_URL`, `REDIS_URL`, `BLOB_BACKEND`, `S3_BUCKET` |
 
-**Cross-field validation at startup** (`config/validation.py`): `RERANK_TOP_K ≤ TOP_K`; `CHUNK_OVERLAP < CHUNK_SIZE`; LLM response cache requires `TEMPERATURE == 0`; `EMBEDDING_DIMENSION` matches the known dimension of `EMBEDDING_MODEL`; semantic chunking requires a configured embedder.
+**Cross-field validation at startup** (`config/validation.py`): `RERANK_TOP_K ≤ TOP_K`; `CHUNK_OVERLAP < CHUNK_SIZE`; and `EMBEDDING_DIMENSION` matches the known dimension of `EMBEDDING_MODEL`.
 
 ### 16.2 Structured Logging
 
@@ -1587,10 +1585,9 @@ Each ADR states the decision, why, what was rejected, and what it costs. Costs a
 **Rejected — per-implementation ad-hoc tests.** Rejected: implementations end up tested against different expectations, and substitutability is never actually checked.
 **Cost.** Contract suites must be written before the second implementation exists, which feels premature. It is not: the suite *is* the specification of the port.
 
-### ADR-021: Recursive chunking as default; semantic available
-**Decision.** `CHUNKING_STRATEGY` selects among recursive (default), semantic, and sentence.
-**Why.** Recursive structure-aware chunking (split on document structure, then paragraphs, then sentences) is predictable in size and cost, respects headings and page boundaries, and requires no embedding pass. It is not naive fixed-size chunking. Semantic chunking often improves coherence but costs a full embedding pass at ingest and produces high-variance chunk sizes that complicate token budgeting.
-**Rejected — semantic as default.** Better coherence on prose. Rejected as default because of ingest cost and size variance; it is one config value away for corpora where it wins.
+### ADR-021: Recursive chunking
+**Decision.** `CHUNKING_STRATEGY` currently accepts only `recursive`.
+**Why.** Recursive structure-aware chunking is predictable in size and cost, respects headings and page boundaries, and requires no embedding pass. Semantic and sentence-only adapters are not implemented and are therefore not selectable.
 **Rejected — fixed-size only (prototype's `chunk_size=800`).** Rejected: splits mid-sentence and destroys structural metadata.
 **Cost.** Three strategies to maintain and contract-test. Justified — chunking is the highest-leverage quality lever in a RAG system, and it must be measurable via the evaluation harness.
 
@@ -1764,7 +1761,7 @@ Deliberately deferred. Each would need its own ADR, and none is designed for in 
 | Embedding abstraction (OpenAI / Gemini / local / HuggingFace) | §9.1 `Embedder`, §10, §15.3 |
 | LLM abstraction (Gemini / OpenAI / Claude / local) | §9.2 `LLMClient`, §15.2 |
 | BGE reranker, 20 → 5 | §9.2 `Reranker`, ADR-008, §16.1 |
-| Configurable chunking (recursive / semantic / sentence) | §10, ADR-021, `CHUNKING_STRATEGY` |
+| Configurable recursive chunking | §10, ADR-021, `CHUNKING_STRATEGY` |
 | Full chunk metadata + filtering | §8.3, ADR-013 |
 | Hybrid retrieval (vector + BM25 → merge → rank → rerank) | §12.2, ADR-006, ADR-007 |
 | Optional, replaceable query rewriting | §9.2 `QueryRewriter`, ADR-024 |
