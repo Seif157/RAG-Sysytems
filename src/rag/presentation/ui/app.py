@@ -19,6 +19,7 @@ from typing import Any
 
 import streamlit as st
 
+from rag.application.use_cases import AgenticAnswerUseCase
 from rag.core.bootstrap import bootstrap
 from rag.core.container import Container
 from rag.domain.errors import RAGError
@@ -93,7 +94,7 @@ def _render_answer(answer: Answer) -> None:
             )
             with st.expander(f"[{index}] {' · '.join(location)}{score}{passages}"):
                 st.write(citation.snippet or "")
-    else:
+    elif answer.retrieved_count:
         st.warning("This answer cites no sources, so it may not be grounded in your documents.")
 
     if answer.is_degraded:
@@ -182,7 +183,8 @@ def main() -> None:
     if not question:
         return
 
-    if not container.catalog.list_documents():
+    documents = container.catalog.list_documents()
+    if not documents and not container.settings.agent.enable_tool_calling:
         st.warning("Upload a document first — there is nothing to search yet.")
         return
 
@@ -192,12 +194,18 @@ def main() -> None:
     window = container.settings.memory.window_turns
     with st.chat_message("assistant"), st.spinner("Searching your documents…"):
         try:
-            answer = _run(
-                container.answer_question.execute(
-                    Query(text=question),
-                    history=tuple(history[-window:]) if window else (),
+            use_case = container.answer_question
+            recent = tuple(history[-window:]) if window else ()
+            if isinstance(use_case, AgenticAnswerUseCase):
+                answer = _run(
+                    use_case.execute(
+                        Query(text=question),
+                        history=recent,
+                        allowed_document_ids=frozenset(d.document_id for d in documents),
+                    )
                 )
-            )
+            else:
+                answer = _run(use_case.execute(Query(text=question), history=recent))
         except RAGError as error:
             st.error(error.message)
             return

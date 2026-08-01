@@ -183,6 +183,19 @@ class TestSecrets:
 
 
 class TestCrossFieldValidation:
+    def test_tool_calling_is_disabled_by_default(self):
+        assert _settings().agent.enable_tool_calling is False
+
+    def test_gemini_tool_calling_is_rejected_at_startup(self):
+        with pytest.raises(ValidationError, match="openrouter"):
+            _settings(ENABLE_TOOL_CALLING="true", LLM_PROVIDER="gemini")
+
+    def test_tool_limits_must_be_positive_and_bounded(self):
+        with pytest.raises(ValidationError):
+            _settings(MAX_TOOL_ROUNDS="0")
+        with pytest.raises(ValidationError):
+            _settings(MAX_TOOL_CALLS_PER_ROUND="6")
+
     def test_rerank_top_k_may_not_exceed_top_k(self):
         # Asking the reranker for more chunks than retrieval produced is a
         # silent quality bug: it never errors, it just under-fills the context.

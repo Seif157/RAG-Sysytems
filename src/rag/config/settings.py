@@ -44,6 +44,7 @@ from rag.config.enums import (
 from rag.config.validation import expected_dimension_for
 
 __all__ = [
+    "AgentSettings",
     "AppSettings",
     "ChunkingSettings",
     "ContextSettings",
@@ -182,6 +183,26 @@ class LLMSettings(_Section):
     temperature: float = Field(default=0.0, ge=0.0, le=2.0, validation_alias="TEMPERATURE")
     max_output_tokens: int = Field(default=2048, ge=1, validation_alias="MAX_OUTPUT_TOKENS")
     timeout_s: float = Field(default=60.0, gt=0.0, validation_alias="LLM_TIMEOUT_S")
+
+
+class AgentSettings(_Section):
+    """Strict limits for the optional function-calling workflow."""
+
+    enable_tool_calling: bool = Field(default=False, validation_alias="ENABLE_TOOL_CALLING")
+    max_tool_rounds: int = Field(default=3, ge=1, le=10, validation_alias="MAX_TOOL_ROUNDS")
+    max_calls_per_round: int = Field(
+        default=2, ge=1, le=5, validation_alias="MAX_TOOL_CALLS_PER_ROUND"
+    )
+    max_total_calls: int = Field(default=5, ge=1, le=20, validation_alias="MAX_TOTAL_TOOL_CALLS")
+    search_max_top_k: int = Field(
+        default=20, ge=1, le=100, validation_alias="SEARCH_TOOL_MAX_TOP_K"
+    )
+    tool_timeout_s: float = Field(
+        default=15.0, gt=0.0, le=120.0, validation_alias="TOOL_TIMEOUT_SECONDS"
+    )
+    max_result_tokens: int = Field(
+        default=4000, ge=1, le=16000, validation_alias="MAX_TOOL_RESULT_TOKENS"
+    )
 
 
 class EmbeddingSettings(_Section):
@@ -408,6 +429,7 @@ class IngestionSettings(_Section):
 # --------------------------------------------------------------------------- #
 _SECTION_TYPES: dict[str, type[_Section]] = {
     "app": AppSettings,
+    "agent": AgentSettings,
     "credentials": CredentialsSettings,
     "llm": LLMSettings,
     "embedding": EmbeddingSettings,
@@ -454,6 +476,7 @@ class Settings(BaseModel):
     model_config = {"frozen": True}
 
     app: AppSettings
+    agent: AgentSettings
     credentials: CredentialsSettings
     llm: LLMSettings
     embedding: EmbeddingSettings
@@ -541,4 +564,13 @@ class Settings(BaseModel):
                 f"RERANK_TOP_K ({self.retrieval.rerank_top_k}) must not exceed "
                 f"TOP_K ({self.retrieval.top_k})"
             )
+        return self
+
+    @model_validator(mode="after")
+    def _tool_calling_requires_openrouter(self) -> Self:
+        """Gemini remains on the proven deterministic path for now."""
+        if self.agent.enable_tool_calling and self.llm.provider is not LLMProvider.OPENROUTER:
+            raise ValueError("ENABLE_TOOL_CALLING currently requires LLM_PROVIDER=openrouter")
+        if self.agent.max_calls_per_round > self.agent.max_total_calls:
+            raise ValueError("MAX_TOOL_CALLS_PER_ROUND must not exceed MAX_TOTAL_TOOL_CALLS")
         return self

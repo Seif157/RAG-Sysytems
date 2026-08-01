@@ -109,6 +109,28 @@ Then run it:
 uv run streamlit run src/rag/presentation/ui/app.py
 ```
 
+### Optional function-calling mode
+
+The default remains the deterministic pipeline: every message retrieves before
+generation. OpenRouter deployments can opt into a bounded function-calling mode:
+
+```env
+ENABLE_TOOL_CALLING=true
+MAX_TOOL_ROUNDS=3
+MAX_TOOL_CALLS_PER_ROUND=2
+MAX_TOTAL_TOOL_CALLS=5
+SEARCH_TOOL_MAX_TOP_K=20
+TOOL_TIMEOUT_SECONDS=15
+MAX_TOOL_RESULT_TOKENS=4000
+```
+
+In this mode the model answers greetings and usage questions directly, but must
+call the read-only `search_documents` tool for document-dependent questions.
+Tool names and arguments are allowlisted and validated; document filters cannot
+expand beyond the IDs supplied by the application; citation markers resolve
+only to retrieved metadata. Gemini continues to use deterministic RAG and
+startup rejects `ENABLE_TOOL_CALLING=true` with `LLM_PROVIDER=gemini`.
+
 Upload a PDF, DOCX, Markdown or text file in the sidebar and ask a question.
 Every answer cites the passages it used; expand a citation to see the source
 text.

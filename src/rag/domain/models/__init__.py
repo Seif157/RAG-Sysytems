@@ -38,6 +38,7 @@ from rag.domain.models.metadata import (
     MetadataField,
 )
 from rag.domain.models.query import Query, RetrievalRequest
+from rag.domain.models.tools import LLMMessage, ToolCall, ToolDefinition, ToolResult
 from rag.domain.models.vectors import DenseVector, SparseVector
 
 __all__ = [
@@ -62,6 +63,7 @@ __all__ = [
     "FilterExpression",
     "FilterOperator",
     "GenerationParams",
+    "LLMMessage",
     "LLMResponse",
     "MetadataField",
     "MetadataFragment",
@@ -77,5 +79,8 @@ __all__ = [
     "ScoredChunk",
     "SparseVector",
     "TokenUsage",
+    "ToolCall",
+    "ToolDefinition",
+    "ToolResult",
     "Turn",
 ]

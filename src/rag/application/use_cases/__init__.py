@@ -5,7 +5,8 @@ operation. Collaborators are injected as port interfaces, so every one of these
 is executable against in-memory doubles with no network access.
 """
 
+from rag.application.use_cases.agentic_answer import AgenticAnswerUseCase
 from rag.application.use_cases.answer_question import AnswerQuestionUseCase
 from rag.application.use_cases.ingest_document import IngestDocumentUseCase
 
-__all__ = ["AnswerQuestionUseCase", "IngestDocumentUseCase"]
+__all__ = ["AgenticAnswerUseCase", "AnswerQuestionUseCase", "IngestDocumentUseCase"]

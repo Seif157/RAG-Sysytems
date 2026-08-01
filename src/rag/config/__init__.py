@@ -18,6 +18,7 @@ from rag.config.enums import (
     RerankerProvider,
 )
 from rag.config.settings import (
+    AgentSettings,
     AppSettings,
     ChunkingSettings,
     ContextSettings,
@@ -35,6 +36,7 @@ from rag.config.validation import KNOWN_EMBEDDING_DIMENSIONS, expected_dimension
 
 __all__ = [
     "KNOWN_EMBEDDING_DIMENSIONS",
+    "AgentSettings",
     "AppEnv",
     "AppSettings",
     "ChunkingSettings",

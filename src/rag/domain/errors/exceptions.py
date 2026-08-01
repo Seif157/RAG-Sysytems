@@ -46,6 +46,10 @@ __all__ = [
     "RAGError",
     "RerankingError",
     "RetrievalError",
+    "ToolCallLimitError",
+    "ToolExecutionError",
+    "ToolTimeoutError",
+    "ToolValidationError",
     "UnsupportedFormatError",
     "VectorStoreError",
     "VectorStoreUnavailableError",
@@ -246,6 +250,24 @@ class LLMTimeoutError(LLMError):
 
 class LLMContentFilterError(LLMError):
     """The provider's safety filter blocked the request or the response."""
+
+
+class ToolExecutionError(RAGError):
+    """A controlled application tool could not be executed."""
+
+
+class ToolValidationError(ToolExecutionError):
+    """A model supplied invalid or unauthorized tool arguments."""
+
+
+class ToolTimeoutError(ToolExecutionError):
+    """A tool exceeded its configured execution deadline."""
+
+    default_retryable = True
+
+
+class ToolCallLimitError(ToolExecutionError):
+    """The bounded function-calling loop exhausted its call allowance."""
 
 
 # --------------------------------------------------------------------------- #

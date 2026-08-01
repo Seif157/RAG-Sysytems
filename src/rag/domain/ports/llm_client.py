@@ -5,7 +5,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 
-from rag.domain.models import GenerationParams, LLMResponse, Prompt
+from rag.domain.errors import LLMError
+from rag.domain.models import GenerationParams, LLMMessage, LLMResponse, Prompt, ToolDefinition
 
 __all__ = ["LLMClient"]
 
@@ -47,6 +48,18 @@ class LLMClient(ABC):
             LLMContentFilterError: If a safety filter blocked the exchange.
             LLMError: On any other generation failure.
         """
+
+    async def respond(
+        self,
+        messages: tuple[LLMMessage, ...],
+        tools: tuple[ToolDefinition, ...],
+        params: GenerationParams,
+    ) -> LLMResponse:
+        """Respond to a chat exchange that may contain controlled tools."""
+        raise LLMError(
+            "the configured LLM adapter does not support function calling",
+            context={"model": self.model_id},
+        )
 
     @abstractmethod
     def stream(self, prompt: Prompt, params: GenerationParams) -> AsyncIterator[str]:

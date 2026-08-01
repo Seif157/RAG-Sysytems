@@ -17,6 +17,7 @@ on provider-specific message strings.
 
 from __future__ import annotations
 
+import json
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -28,7 +29,15 @@ from rag.domain.errors import (
     LLMRateLimitError,
     LLMTimeoutError,
 )
-from rag.domain.models import GenerationParams, LLMResponse, Prompt, TokenUsage
+from rag.domain.models import (
+    GenerationParams,
+    LLMMessage,
+    LLMResponse,
+    Prompt,
+    TokenUsage,
+    ToolCall,
+    ToolDefinition,
+)
 from rag.domain.ports import LLMClient
 
 __all__ = ["OpenRouterLLMClient"]
@@ -120,6 +129,97 @@ class OpenRouterLLMClient(LLMClient):
             usage=self._usage(response),
             finish_reason=str(finish_reason) if finish_reason is not None else None,
         )
+
+    async def respond(
+        self,
+        messages: tuple[LLMMessage, ...],
+        tools: tuple[ToolDefinition, ...],
+        params: GenerationParams,
+    ) -> LLMResponse:
+        """Generate text or parse OpenAI-compatible function calls."""
+        request: dict[str, Any] = {
+            "model": self._model,
+            "messages": [self._tool_message(message) for message in messages],
+            "temperature": params.temperature,
+            "max_tokens": params.max_output_tokens,
+            "timeout": params.timeout_s,
+        }
+        if tools:
+            request["tools"] = [self._tool_schema(tool) for tool in tools]
+            request["tool_choice"] = "auto"
+        try:
+            provider_response = await self._client.chat.completions.create(**request)
+        except Exception as exc:
+            raise self._translate(exc) from exc
+        choice = self._first_choice(provider_response)
+        message = getattr(choice, "message", None)
+        text = getattr(message, "content", None) or ""
+        calls = tuple(
+            self._parse_tool_call(call) for call in (getattr(message, "tool_calls", None) or ())
+        )
+        if not text.strip() and not calls:
+            raise self._empty_completion(getattr(choice, "finish_reason", None))
+        return LLMResponse(
+            model_id=self._model,
+            text=text,
+            usage=self._usage(provider_response),
+            finish_reason=str(getattr(choice, "finish_reason", "")) or None,
+            tool_calls=calls,
+        )
+
+    @staticmethod
+    def _tool_schema(tool: ToolDefinition) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "function": {
+                "name": tool.name,
+                "description": tool.description,
+                "parameters": dict(tool.parameters_schema),
+            },
+        }
+
+    @staticmethod
+    def _tool_message(message: LLMMessage) -> dict[str, Any]:
+        rendered: dict[str, Any] = {"role": message.role, "content": message.content}
+        if message.tool_calls:
+            rendered["tool_calls"] = [
+                {
+                    "id": call.call_id,
+                    "type": "function",
+                    "function": {"name": call.name, "arguments": json.dumps(dict(call.arguments))},
+                }
+                for call in message.tool_calls
+            ]
+        if message.role == "tool":
+            rendered["tool_call_id"] = message.tool_call_id
+            if message.name:
+                rendered["name"] = message.name
+        return rendered
+
+    def _parse_tool_call(self, raw: object) -> ToolCall:
+        call_id = getattr(raw, "id", None)
+        function = getattr(raw, "function", None)
+        name = getattr(function, "name", None)
+        encoded = getattr(function, "arguments", None)
+        if not isinstance(call_id, str) or not call_id.strip():
+            raise LLMError(
+                "OpenRouter returned a tool call without an id", context={"model": self._model}
+            )
+        if not isinstance(name, str) or not name.strip():
+            raise LLMError(
+                "OpenRouter returned a tool call without a name", context={"model": self._model}
+            )
+        try:
+            arguments = json.loads(encoded) if isinstance(encoded, str) else None
+        except json.JSONDecodeError as exc:
+            raise LLMError(
+                "OpenRouter returned malformed tool arguments", context={"model": self._model}
+            ) from exc
+        if not isinstance(arguments, dict):
+            raise LLMError(
+                "OpenRouter tool arguments were not an object", context={"model": self._model}
+            )
+        return ToolCall(call_id=call_id, name=name, arguments=arguments)
 
     def stream(self, prompt: Prompt, params: GenerationParams) -> AsyncIterator[str]:
         """Generate a response incrementally."""

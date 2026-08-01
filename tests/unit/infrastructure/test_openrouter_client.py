@@ -26,7 +26,7 @@ from rag.domain.errors import (
     LLMRateLimitError,
     LLMTimeoutError,
 )
-from rag.domain.models import GenerationParams, Prompt
+from rag.domain.models import GenerationParams, LLMMessage, Prompt, ToolDefinition
 from rag.infrastructure.llm import OpenRouterLLMClient
 
 pytestmark = pytest.mark.unit
@@ -45,12 +45,13 @@ def _completion(
     text: str | None = "Kepler died in 1630 [1].",
     finish_reason: str | None = "stop",
     usage: tuple[int, int] | None = (42, 9),
+    tool_calls: list[Any] | None = None,
 ) -> SimpleNamespace:
     """A chat completion shaped like the one the SDK returns."""
     return SimpleNamespace(
         choices=[
             SimpleNamespace(
-                message=SimpleNamespace(content=text),
+                message=SimpleNamespace(content=text, tool_calls=tool_calls),
                 finish_reason=finish_reason,
             )
         ],
@@ -307,3 +308,55 @@ class TestStreaming:
 
         with pytest.raises(LLMRateLimitError):
             [fragment async for fragment in client.stream(_PROMPT, _PARAMS)]
+
+
+class TestFunctionCalling:
+    @staticmethod
+    def _tool() -> ToolDefinition:
+        return ToolDefinition(
+            "search_documents",
+            "Search documents",
+            {
+                "type": "object",
+                "properties": {"query": {"type": "string"}},
+                "required": ["query"],
+                "additionalProperties": False,
+            },
+        )
+
+    @staticmethod
+    def _call(
+        arguments: str = '{"query":"leave"}',
+        *,
+        call_id: str = "call-1",
+        name: str = "search_documents",
+    ) -> SimpleNamespace:
+        return SimpleNamespace(id=call_id, function=SimpleNamespace(name=name, arguments=arguments))
+
+    async def test_neutral_schema_and_tool_choice_reach_provider(self):
+        client, completions = _client(result=_completion(text="Hello", tool_calls=[]))
+        await client.respond((LLMMessage("user", "hello"),), (self._tool(),), _PARAMS)
+        assert completions.calls[0]["tool_choice"] == "auto"
+        assert completions.calls[0]["tools"][0]["function"]["name"] == "search_documents"
+
+    async def test_single_and_multiple_calls_are_parsed(self):
+        calls = [self._call(), self._call('{"query":"policy"}', call_id="call-2")]
+        client, _ = _client(
+            result=_completion(text=None, finish_reason="tool_calls", tool_calls=calls)
+        )
+        response = await client.respond((LLMMessage("user", "leave?"),), (self._tool(),), _PARAMS)
+        assert [call.call_id for call in response.tool_calls] == ["call-1", "call-2"]
+
+    @pytest.mark.parametrize("arguments", ["{bad", "[]", '"text"'])
+    async def test_malformed_or_non_object_arguments_fail_safely(self, arguments):
+        client, _ = _client(result=_completion(text=None, tool_calls=[self._call(arguments)]))
+        with pytest.raises(LLMError):
+            await client.respond((LLMMessage("user", "leave?"),), (self._tool(),), _PARAMS)
+
+    async def test_tool_results_use_the_provider_tool_role(self):
+        client, completions = _client(result=_completion(text="Done", tool_calls=[]))
+        message = LLMMessage(
+            "tool", '{"result_count":0}', tool_call_id="call-1", name="search_documents"
+        )
+        await client.respond((message,), (), _PARAMS)
+        assert completions.calls[0]["messages"][0]["tool_call_id"] == "call-1"

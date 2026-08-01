@@ -12,6 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from rag.domain.models.answer import TokenUsage
+from rag.domain.models.tools import ToolCall
 
 __all__ = ["GenerationParams", "LLMResponse", "Prompt"]
 
@@ -90,12 +91,18 @@ class LLMResponse:
             callers may wish to surface.
     """
 
-    text: str
     model_id: str
+    text: str = ""
     usage: TokenUsage | None = None
     finish_reason: str | None = None
+    tool_calls: tuple[ToolCall, ...] = ()
 
     def __post_init__(self) -> None:
         """Validate the response is attributable to a model."""
         if not self.model_id or not self.model_id.strip():
             raise ValueError("model_id must be a non-empty string")
+
+    @property
+    def has_tool_calls(self) -> bool:
+        """Whether the provider requested at least one tool."""
+        return bool(self.tool_calls)

@@ -18,7 +18,12 @@ from pydantic import SecretStr
 from qdrant_client import AsyncQdrantClient
 
 from rag.application.services import ContextBuilder
-from rag.application.use_cases import AnswerQuestionUseCase, IngestDocumentUseCase
+from rag.application.tools import SearchDocumentsTool, ToolExecutor
+from rag.application.use_cases import (
+    AgenticAnswerUseCase,
+    AnswerQuestionUseCase,
+    IngestDocumentUseCase,
+)
 from rag.config import (
     ChunkingStrategyName,
     EmbeddingProvider,
@@ -346,15 +351,35 @@ class Container:
         )
 
     @cached_property
-    def answer_question(self) -> AnswerQuestionUseCase:
+    def answer_question(self) -> AnswerQuestionUseCase | AgenticAnswerUseCase:
         """The question-answering use case."""
+        context_builder = ContextBuilder(
+            budget_tokens=self._settings.context.token_budget,
+            count_tokens=self.token_counter,
+        )
+        if self._settings.agent.enable_tool_calling:
+            search = SearchDocumentsTool(
+                self.retriever,
+                self.reranker,
+                context_builder,
+                max_top_k=self._settings.agent.search_max_top_k,
+                rerank_top_k=self._settings.retrieval.rerank_top_k,
+            )
+            return AgenticAnswerUseCase(
+                llm=self.llm,
+                executor=ToolExecutor(search, timeout_s=self._settings.agent.tool_timeout_s),
+                context_builder=context_builder,
+                generation_params=self.generation_params(),
+                prompt_version=self._settings.context.prompt_version,
+                max_rounds=self._settings.agent.max_tool_rounds,
+                max_calls_per_round=self._settings.agent.max_calls_per_round,
+                max_total_calls=self._settings.agent.max_total_calls,
+                max_result_tokens=self._settings.agent.max_result_tokens,
+            )
         return AnswerQuestionUseCase(
             retriever=self.retriever,
             reranker=self.reranker,
-            context_builder=ContextBuilder(
-                budget_tokens=self._settings.context.token_budget,
-                count_tokens=self.token_counter,
-            ),
+            context_builder=context_builder,
             prompt_builder=PromptBuilder(self.token_counter),
             llm=self.llm,
             generation_params=self.generation_params(),
