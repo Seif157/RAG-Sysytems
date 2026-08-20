@@ -34,6 +34,8 @@ from rag.domain.models.ingestion import (
 from rag.domain.models.metadata import (
     FILTERABLE_FIELDS,
     ChunkMetadata,
+    DocumentAccessPolicy,
+    DocumentAccessScope,
     DocumentType,
     MetadataField,
 )
@@ -57,6 +59,8 @@ __all__ = [
     "DenseVector",
     "DistanceMetric",
     "Document",
+    "DocumentAccessPolicy",
+    "DocumentAccessScope",
     "DocumentProperties",
     "DocumentType",
     "FieldFilter",

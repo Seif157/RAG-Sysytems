@@ -13,6 +13,7 @@ from rag.domain.models import (
     ChunkCandidate,
     ChunkMetadata,
     Document,
+    DocumentAccessPolicy,
     DocumentProperties,
     DocumentType,
     RawDocument,
@@ -121,7 +122,13 @@ class IngestDocumentUseCase:
         self._clock = clock
         self._sparse_encoder = sparse_encoder
 
-    async def execute(self, filename: str, content: bytes) -> Document:
+    async def execute(
+        self,
+        filename: str,
+        content: bytes,
+        *,
+        access_policy: DocumentAccessPolicy | None = None,
+    ) -> Document:
         """Ingest an uploaded file.
 
         Args:
@@ -144,7 +151,7 @@ class IngestDocumentUseCase:
         document_id = self._document_id(filename)
 
         previous = self._catalog.get(document_id)
-        if previous is not None and previous.content_hash == raw.content_hash:
+        if previous is not None and previous.content_hash == raw.content_hash and access_policy is None:
             # Identical content: nothing to re-embed and nothing to re-index.
             return previous
 
@@ -160,7 +167,7 @@ class IngestDocumentUseCase:
             chunking.record(chunks=len(candidates))
 
         chunks = self._build_chunks(
-            candidates, raw, parsed.properties, document_id, version, ingested_at
+            candidates, raw, parsed.properties, document_id, version, ingested_at, access_policy
         )
 
         if chunks:
@@ -224,6 +231,7 @@ class IngestDocumentUseCase:
         document_id: str,
         version: int,
         ingested_at: datetime,
+        access_policy: DocumentAccessPolicy | None,
     ) -> list[Chunk]:
         """Stamp identity and provenance onto chunk candidates.
 
@@ -262,6 +270,11 @@ class IngestDocumentUseCase:
                         title=properties.title,
                         created_at=properties.created_at,
                         language=properties.language,
+                        access_scope=access_policy.scope if access_policy else None,
+                        access_scope_key=access_policy.scope_key if access_policy else None,
+                        required_permission=(
+                            access_policy.required_permission if access_policy else None
+                        ),
                     ),
                 )
             )

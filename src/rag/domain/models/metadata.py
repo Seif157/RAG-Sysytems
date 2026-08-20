@@ -21,6 +21,8 @@ from enum import StrEnum
 __all__ = [
     "FILTERABLE_FIELDS",
     "ChunkMetadata",
+    "DocumentAccessPolicy",
+    "DocumentAccessScope",
     "DocumentType",
     "MetadataField",
 ]
@@ -37,6 +39,33 @@ class DocumentType(StrEnum):
     DOCX = "DOCX"
     TXT = "TXT"
     MARKDOWN = "MARKDOWN"
+
+
+class DocumentAccessScope(StrEnum):
+    """Audience boundary applied before retrieval."""
+
+    ORGANISATION = "ORGANISATION"
+    BRANCH = "BRANCH"
+    DEPARTMENT = "DEPARTMENT"
+    EMPLOYEE = "EMPLOYEE"
+
+
+@dataclass(frozen=True, slots=True)
+class DocumentAccessPolicy:
+    """Access metadata supplied by a trusted ingestion caller."""
+
+    scope: DocumentAccessScope
+    scope_key: str | None = None
+    required_permission: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.scope is DocumentAccessScope.ORGANISATION:
+            if self.scope_key is not None:
+                raise ValueError("organisation documents must not have a scope_key")
+        elif self.scope_key is None or not self.scope_key.strip():
+            raise ValueError(f"{self.scope.value} documents require a non-empty scope_key")
+        if self.required_permission is not None and not self.required_permission.strip():
+            raise ValueError("required_permission must be non-empty when supplied")
 
 
 class MetadataField(StrEnum):
@@ -69,6 +98,9 @@ class MetadataField(StrEnum):
     TOKEN_COUNT = "token_count"
     CHUNKING_STRATEGY = "chunking_strategy"
     EMBEDDING_MODEL_ID = "embedding_model_id"
+    ACCESS_SCOPE = "access_scope"
+    ACCESS_SCOPE_KEY = "access_scope_key"
+    REQUIRED_PERMISSION = "required_permission"
 
 
 #: Fields that may appear in a retrieval filter and therefore receive a payload
@@ -91,6 +123,9 @@ FILTERABLE_FIELDS: frozenset[MetadataField] = frozenset(
         MetadataField.INGESTED_AT,
         MetadataField.LANGUAGE,
         MetadataField.CHUNK_INDEX,
+        MetadataField.ACCESS_SCOPE,
+        MetadataField.ACCESS_SCOPE_KEY,
+        MetadataField.REQUIRED_PERMISSION,
     }
 )
 
@@ -147,6 +182,9 @@ class ChunkMetadata:
     title: str | None = None
     created_at: datetime | None = None
     language: str | None = None
+    access_scope: DocumentAccessScope | None = None
+    access_scope_key: str | None = None
+    required_permission: str | None = None
 
     def __post_init__(self) -> None:
         """Validate structural invariants that no extractor may violate."""
@@ -166,6 +204,13 @@ class ChunkMetadata:
             raise ValueError("token_count must be >= 0")
         if self.page_number is not None and self.page_number < 1:
             raise ValueError("page_number is one-based and must be >= 1")
+        if self.access_scope is DocumentAccessScope.ORGANISATION:
+            if self.access_scope_key is not None:
+                raise ValueError("organisation metadata must not have an access_scope_key")
+        elif self.access_scope is not None and (
+            self.access_scope_key is None or not self.access_scope_key.strip()
+        ):
+            raise ValueError(f"{self.access_scope.value} metadata requires access_scope_key")
 
         if self.heading_path is not None:
             # Coerce so the value object stays immutable and hashable even when

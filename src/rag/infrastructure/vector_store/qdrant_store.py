@@ -27,6 +27,7 @@ from rag.domain.models import (
     DenseVector,
     DistanceMetric,
     DocumentType,
+    DocumentAccessScope,
     FieldFilter,
     FilterExpression,
     FilterOperator,
@@ -426,6 +427,9 @@ def _to_payload(chunk: Chunk) -> dict[str, Any]:
         "title": metadata.title,
         "created_at": metadata.created_at.isoformat() if metadata.created_at else None,
         "language": metadata.language,
+        "access_scope": metadata.access_scope.value if metadata.access_scope else None,
+        "access_scope_key": metadata.access_scope_key,
+        "required_permission": metadata.required_permission,
     }
     return payload
 
@@ -457,5 +461,12 @@ def _from_payload(payload: dict[str, Any]) -> Chunk:
             title=payload.get("title"),
             created_at=datetime.fromisoformat(created_at) if created_at else None,
             language=payload.get("language"),
+            access_scope=(
+                DocumentAccessScope(payload["access_scope"])
+                if payload.get("access_scope")
+                else None
+            ),
+            access_scope_key=payload.get("access_scope_key"),
+            required_permission=payload.get("required_permission"),
         ),
     )

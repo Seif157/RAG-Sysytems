@@ -14,7 +14,7 @@ import pytest
 
 from rag.application.use_cases import IngestDocumentUseCase
 from rag.domain.errors import DocumentTooLargeError, UnsupportedFormatError
-from rag.domain.models import DocumentType
+from rag.domain.models import DocumentAccessPolicy, DocumentAccessScope, DocumentType
 from rag.infrastructure.chunking import RecursiveChunker
 from rag.infrastructure.documents import DocumentLoader, ParserRegistry, TxtParser
 from rag.infrastructure.storage import DocumentCatalog, UploadStore
@@ -73,6 +73,21 @@ class TestTheUploadIsActuallyUsed:
 
         assert first.document_id != second.document_id
         assert store.chunk_count >= 2
+
+    async def test_access_policy_is_stamped_on_every_chunk(self, tmp_path):
+        use_case, store, _ = _use_case(tmp_path)
+        policy = DocumentAccessPolicy(
+            DocumentAccessScope.DEPARTMENT,
+            scope_key="department-7",
+            required_permission="hr.documents.confidential.read",
+        )
+
+        await use_case.execute("restricted.txt", b"Department policy.", access_policy=policy)
+
+        metadata = next(iter(store._chunks.values())).metadata
+        assert metadata.access_scope is DocumentAccessScope.DEPARTMENT
+        assert metadata.access_scope_key == "department-7"
+        assert metadata.required_permission == "hr.documents.confidential.read"
 
 
 class TestIngestionResult:

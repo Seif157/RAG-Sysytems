@@ -19,6 +19,12 @@ from rag.domain.models import (
     MetadataField,
 )
 
+
+def test_hr_access_fields_are_filterable():
+    assert MetadataField.ACCESS_SCOPE in FILTERABLE_FIELDS
+    assert MetadataField.ACCESS_SCOPE_KEY in FILTERABLE_FIELDS
+    assert MetadataField.REQUIRED_PERMISSION in FILTERABLE_FIELDS
+
 pytestmark = pytest.mark.unit
 
 
